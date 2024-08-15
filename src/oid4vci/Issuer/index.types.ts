@@ -30,6 +30,7 @@ export type VcIssuerOptions = {
     logoUri?: string;
     clientName?: string;
     supportedCredentials?: SupportedCredentials[];
+    resolver: Resolvable;
 } & KeyPairRequirements;
 
 export type IssuerStoreData = { id: string; pin: number };
