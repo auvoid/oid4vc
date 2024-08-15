@@ -29,7 +29,6 @@ export type VcIssuerOptions = {
     store: IIssuerStore<IssuerStoreData>;
     logoUri?: string;
     clientName?: string;
-    resolver: Resolvable;
     supportedCredentials?: SupportedCredentials[];
 } & KeyPairRequirements;
 

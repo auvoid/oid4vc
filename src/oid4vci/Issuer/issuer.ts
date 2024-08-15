@@ -172,6 +172,7 @@ export class VcIssuer {
             })
             .catch((e) => {
                 console.log("invalid", request);
+                console.error(e);
                 throw new Error("invalid_request");
             });
         const { pin } = await this.store.getById(payload.id);
