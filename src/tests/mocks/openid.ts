@@ -1,4 +1,4 @@
-import { readFile, writeFile } from "fs/promises";
+import { readFile, writeFile } from 'fs/promises';
 import {
     IssuerStoreData,
     OpenidProvider,
@@ -8,21 +8,21 @@ import {
     VcHolder,
     VcIssuer,
     buildSigner,
-} from "../..";
-import { resolver } from "./iota-resolver";
-import { testingKeys } from "./keys.mock";
-import path from "path";
-import { fileURLToPath } from "url";
+} from '../..';
+import { resolver } from './iota-resolver';
+import { testingKeys } from './keys.mock';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const file = path.resolve(__dirname, "./store.test-mock");
+const file = path.resolve(__dirname, './store.test-mock');
 
 // @ts-ignore
 const reader = async () => {
     const raw = await readFile(file).catch((e) => {
-        if (e.code === "ENOENT") writer([]);
+        if (e.code === 'ENOENT') writer([]);
         return Buffer.from(JSON.stringify([]));
     });
     return JSON.parse(raw.toString());
@@ -33,27 +33,27 @@ const writer = async (data: IssuerStoreData[]) => {
 };
 
 const baseIssuerConfig = {
-    batchCredentialEndpoint: "http://localhost:5999/api/credentials",
-    credentialEndpoint: "http://localhost:5999/api/credential",
-    credentialIssuer: "http://localhost:5999/",
-    proofTypesSupported: ["jwt"],
-    cryptographicBindingMethodsSupported: ["did:key"],
-    credentialSigningAlgValuesSupported: ["ES256"],
+    batchCredentialEndpoint: 'http://localhost:5999/api/credentials',
+    credentialEndpoint: 'http://localhost:5999/api/credential',
+    credentialIssuer: 'http://localhost:5999/',
+    proofTypesSupported: ['jwt'],
+    cryptographicBindingMethodsSupported: ['did:key'],
+    credentialSigningAlgValuesSupported: ['ES256'],
     resolver,
-    tokenEndpoint: "http://localhost:5999/token",
+    tokenEndpoint: 'http://localhost:5999/token',
     store: new SimpleStore({ reader, writer }),
     supportedCredentials: {},
 };
 
 const baseRpConfig = {
-    clientId: "tanglelabs.io",
-    redirectUri: "http://localhost:5999/api/auth",
+    clientId: 'tanglelabs.io',
+    redirectUri: 'http://localhost:5999/api/auth',
     clientMetadata: {
         idTokenSigningAlgValuesSupported: [SigningAlgs.ES256],
-        subjectSyntaxTypesSupported: ["did:iota"],
+        subjectSyntaxTypesSupported: ['did:iota'],
         vpFormats: {
             jwt_vc_json: {
-                alg: ["EdDSA"],
+                alg: ['EdDSA'],
             },
         },
     },
@@ -79,13 +79,14 @@ export const issuer = new VcIssuer({
     ...baseIssuerConfig,
     supportedCredentials: [
         {
-            name: "wa_driving_license",
-            type: ["wa_driving_license"],
+            name: 'wa_driving_license',
+            type: ['wa_driving_license'],
             display: [
                 {
-                    name: "Washington Driving License",
+                    name: 'Washington Driving License',
                 },
             ],
+            format: 'jwt_vc_json',
         },
     ],
 });
