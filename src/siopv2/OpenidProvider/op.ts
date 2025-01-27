@@ -126,12 +126,10 @@ export class OpenidProvider {
         request: SiopRequest,
     ) {
         const pex = new PEX();
-        console.log('CREDENTIALS', credentials);
         const evaluation = pex.evaluateCredentials(
             presentationDefinition,
             credentials,
         );
-        console.log(evaluation);
         if (evaluation.areRequiredCredentialsPresent === 'error')
             throw new Error('credentials are not present');
         const { presentation, presentationSubmission } = pex.presentationFrom(
@@ -171,7 +169,6 @@ export class OpenidProvider {
             state: requestOptions.state,
         };
 
-        console.log('SENDING RESPONSE: ', response);
         await axios
             .post(requestOptions.redirectUri, qs.stringify(response), {
                 headers: {

@@ -1,19 +1,19 @@
-import { objectToSnakeCaseQueryString } from "../../utils/query";
+import { objectToSnakeCaseQueryString } from '../../utils/query';
 import {
     CreateRequestOptions,
     RPOptions,
     AuthResponse,
     SiopRequestResult,
     SigningAlgs,
-} from "./index.types";
-import * as didJWT from "did-jwt";
-import { PEX } from "@sphereon/pex";
-import { PresentationDefinitionV2 } from "@sphereon/pex-models";
-import { buildSigner } from "../../utils/signer";
-import { Resolvable } from "did-resolver";
-import { camelToSnakeRecursive } from "../../utils/object";
-import { nanoid } from "nanoid";
-import { normalizePresentationDefinition } from "../../utils/definition";
+} from './index.types';
+import * as didJWT from 'did-jwt';
+import { PEX } from '@sphereon/pex';
+import { PresentationDefinitionV2 } from '@sphereon/pex-models';
+import { buildSigner } from '../../utils/signer';
+import { Resolvable } from 'did-resolver';
+import { camelToSnakeRecursive } from '../../utils/object';
+import { nanoid } from 'nanoid';
+import { normalizePresentationDefinition } from '../../utils/definition';
 
 export class RelyingParty {
     private metadata: RPOptions;
@@ -45,7 +45,7 @@ export class RelyingParty {
      */
 
     async createRequest(
-        args: CreateRequestOptions
+        args: CreateRequestOptions,
     ): Promise<SiopRequestResult> {
         const { requestBy, ...requestOptions } = args;
         const { privKeyHex, did, kid, ...metadata } = this.metadata;
@@ -56,8 +56,8 @@ export class RelyingParty {
                 ...metadata.clientMetadata,
                 ...args.clientMetadata,
             },
-            scope: "openid",
-            responseMode: "post",
+            scope: 'openid',
+            responseMode: 'post',
         };
 
         const nonce = nanoid();
@@ -79,16 +79,16 @@ export class RelyingParty {
         const request = await didJWT.createJWT(
             { ...requestParams },
             { issuer: this.did, signer: this.signer },
-            { kid: this.kid, alg: this.alg }
+            { kid: this.kid, alg: this.alg },
         );
 
-        requestBy === "value"
+        requestBy === 'value'
             ? (requestQuery.request = request)
             : (requestQuery.requestUri = args.requestUri);
 
         return {
             uri: encodeURI(
-                `siopv2://idtoken${objectToSnakeCaseQueryString(requestQuery)}`
+                `siopv2://idtoken${objectToSnakeCaseQueryString(requestQuery)}`,
             ) as `siopv2://idtoken${string}`,
             request: request,
             requestOptions: requestParams,
@@ -102,13 +102,13 @@ export class RelyingParty {
                 aud: false,
             },
         });
-        if (!result.verified) throw new Error("Invalid JWT");
+        if (!result.verified) throw new Error('Invalid JWT');
         return result.payload;
     }
 
     async verifyAuthResponse(
         authResponse: AuthResponse,
-        presentationDefinition?: PresentationDefinitionV2
+        presentationDefinition?: PresentationDefinitionV2,
     ) {
         if (
             !(
@@ -116,7 +116,7 @@ export class RelyingParty {
                 (authResponse.vp_token && authResponse.presentation_submission)
             )
         )
-            throw new Error("Bad response");
+            throw new Error('Bad response');
         if (authResponse.id_token) {
             await this.validateJwt(authResponse.id_token);
             return;
@@ -130,11 +130,11 @@ export class RelyingParty {
                 authResponse.vp_token,
                 {
                     generatePresentationSubmission: true,
-                }
+                },
             );
 
-            if (result.areRequiredCredentialsPresent === "error")
-                throw new Error("Invalid Credentials Shared");
+            if (result.areRequiredCredentialsPresent === 'error')
+                throw new Error('Invalid Credentials Shared');
         }
     }
 
@@ -147,10 +147,10 @@ export class RelyingParty {
                 iss: this.did,
             },
             { issuer: this.did, signer: this.signer },
-            { alg: this.alg, kid: this.kid }
+            { alg: this.alg, kid: this.kid },
         );
         return token;
     }
 }
 
-export * from "./index.types";
+export * from './index.types';

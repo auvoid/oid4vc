@@ -21,7 +21,6 @@ export class VcHolder {
             grant_type: 'urn:ietf:params:oauth:grant-type:pre-authorized_code',
             'pre-authorized_code': args.preAuthCode,
         };
-        console.log('RESPONSE: ', response);
         // @ts-ignore
         if (args.userPin) response.user_pin = args.userPin;
         return response;
@@ -31,7 +30,6 @@ export class VcHolder {
         const decodedUri = decodeURI(offer);
         const search = new URL(decodedUri).search;
         const rawOffer = parseQueryStringToJson(search);
-        console.log(rawOffer);
         let credentialOffer;
         if (rawOffer.credentialOfferUri) {
             const { data } = await axios.get(rawOffer.credentialOfferUri);
@@ -45,7 +43,6 @@ export class VcHolder {
 
     async retrieveMetadata(credentialOffer: string) {
         const offerRaw = await this.parseCredentialOffer(credentialOffer);
-        console.log('RAW', offerRaw);
         const metadataEndpoint = joinUrls(
             offerRaw.credentialIssuer,
             '.well-known/openid-credential-issuer',
@@ -117,7 +114,6 @@ export class VcHolder {
     ): Promise<string[]> {
         const payload = this.constructPayload(credentials, conf, proof);
 
-        console.log('SENDING PAYLOAD', payload);
         const { data } = await axios.post(path, payload, {
             headers: {
                 Authorization: `Bearer ${accessToken}`,

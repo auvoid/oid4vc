@@ -19,18 +19,25 @@ const __dirname = path.dirname(__filename);
 
 const file = path.resolve(__dirname, './store.test-mock');
 
-// @ts-ignore
-const reader = async () => {
-    const raw = await readFile(file).catch((e) => {
-        if (e.code === 'ENOENT') writer([]);
-        return Buffer.from(JSON.stringify([]));
-    });
-    return JSON.parse(raw.toString());
-};
-
-const writer = async (data: IssuerStoreData[]) => {
-    await writeFile(file, JSON.stringify(data));
-};
+class Store {
+    create(payload: { id: string; pin: number }) {
+        return { id: payload.id, pin: null } as {
+            id: string;
+            pin: number | null;
+        };
+    }
+    getAll: () =>
+        | { id: string; pin: number }[]
+        | Promise<{ id: string; pin: number }[]>;
+    getById(id: string) {
+        return { id, pin: null } as { id: string; pin: number | null };
+    }
+    updateById: (
+        id: string,
+        payload: Partial<{ id: string; pin: number }>,
+    ) => { id: string; pin: number } | Promise<{ id: string; pin: number }>;
+    deleteById: (id: string) => Promise<{ id: string; pin: number }>;
+}
 
 const baseIssuerConfig = {
     batchCredentialEndpoint: 'http://localhost:5999/api/credentials',
@@ -41,7 +48,7 @@ const baseIssuerConfig = {
     credentialSigningAlgValuesSupported: ['ES256'],
     resolver,
     tokenEndpoint: 'http://localhost:5999/token',
-    store: new SimpleStore({ reader, writer }),
+    store: new Store(),
     supportedCredentials: {},
 };
 
