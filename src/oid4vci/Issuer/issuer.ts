@@ -1,24 +1,24 @@
-import { nanoid } from "nanoid";
+import { nanoid } from 'nanoid';
 import {
     camelToSnakeCaseRecursive,
     objectToSnakeCaseQueryString,
-} from "../../utils/query";
+} from '../../utils/query';
 import {
     CreateCredentialOfferOptions,
     IIssuerStore,
     IssuerStoreData,
     SupportedCredentials,
     VcIssuerOptions,
-} from "./index.types";
-import { generatePin } from "../../utils/pin";
-import { TokenRequest } from "../Holder/index.types";
-import * as didJWT from "did-jwt";
-import { buildSigner } from "../../utils/signer";
-import { Resolvable } from "did-resolver";
-import { SigningAlgs } from "../../siopv2/siop";
+} from './index.types';
+import { generatePin } from '../../utils/pin';
+import { TokenRequest } from '../Holder/index.types';
+import * as didJWT from 'did-jwt';
+import { buildSigner } from '../../utils/signer';
+import { Resolvable } from 'did-resolver';
+import { SigningAlgs } from '../../siopv2/siop';
 
 export class VcIssuer {
-    metadata: Omit<VcIssuerOptions, "store" | "did" | "kid" | "privKeyHex">;
+    metadata: Omit<VcIssuerOptions, 'store' | 'did' | 'kid' | 'privKeyHex'>;
     store: IIssuerStore<IssuerStoreData>;
     signer: didJWT.Signer;
     did: string;
@@ -30,7 +30,7 @@ export class VcIssuer {
         const { store, did, privKeyHex, kid, ...others } = options;
         const proofTypes = this.transformProofs(
             others.proofTypesSupported,
-            others.credentialSigningAlgValuesSupported
+            others.credentialSigningAlgValuesSupported,
         );
         this.metadata = others;
         // @ts-ignore
@@ -50,7 +50,7 @@ export class VcIssuer {
                 // @ts-ignore
                 (proofsMap[p] = {
                     proof_signing_alg_values_supported: algValues,
-                })
+                }),
         );
         return proofsMap;
     }
@@ -67,18 +67,18 @@ export class VcIssuer {
         supportedCredentialsArray.forEach(
             (cred) =>
                 (credential_configurations_supported[cred.name] = {
-                    format: "jwt_vc_json",
+                    format: cred.format,
                     cryptographic_binding_methods_supported:
                         this.metadata.cryptographicBindingMethodsSupported,
                     credential:
                         this.metadata.credentialSigningAlgValuesSupported,
                     proof_types_supported: this.metadata.proofTypesSupported,
                     credential_definition: {
-                        type: ["VerifiableCredential", ...cred.type],
+                        type: ['VerifiableCredential', ...cred.type],
                     },
                     scope: cred.name,
                     display: cred.display,
-                })
+                }),
         );
         const metadata = {
             credential_issuer: this.metadata.credentialIssuer,
@@ -91,7 +91,7 @@ export class VcIssuer {
             // @ts-ignore
             metadata.display = [
                 {
-                    locale: "en-US",
+                    locale: 'en-US',
                     logo_uri: this.metadata.logoUri,
                     client_name: this.metadata.clientName,
                 },
@@ -108,7 +108,7 @@ export class VcIssuer {
 
     async createCredentialOffer(
         args: CreateCredentialOfferOptions,
-        extras: Record<string, any> = {}
+        extras: Record<string, any> = {},
     ): Promise<{
         uri: string;
         pin?: number;
@@ -129,7 +129,7 @@ export class VcIssuer {
                 signer: this.signer,
                 expiresIn,
             },
-            { alg: this.alg, kid: this.kid }
+            { alg: this.alg, kid: this.kid },
         );
 
         const offer = camelToSnakeCaseRecursive({
@@ -137,19 +137,19 @@ export class VcIssuer {
             ...options,
             credentialConfigurationIds: [...credentials],
             grants: {
-                "urn:ietf:params:oauth:grant-type:pre-authorized_code": {
-                    "pre-authorized_code": code,
+                'urn:ietf:params:oauth:grant-type:pre-authorized_code': {
+                    'pre-authorized_code': code,
                 },
             },
         });
         if (pinNeeded)
             offer.grants.tx_code = {
                 length: 6,
-                input_mode: "numeric",
+                input_mode: 'numeric',
             };
         const pin = args.pinRequired ? generatePin() : null;
         const jsonEmbed =
-            requestBy === "value"
+            requestBy === 'value'
                 ? { credential_offer: offer }
                 : { credential_offer_uri: credentialOfferUri };
 
@@ -157,30 +157,29 @@ export class VcIssuer {
         const uri = encodeURI(
             `openid-credential-offer://${objectToSnakeCaseQueryString({
                 ...jsonEmbed,
-            })}`
+            })}`,
         );
         return { uri, pin, offer };
     }
 
     async createTokenResponse(request: TokenRequest) {
-        if (!request.grant_type || !request["pre-authorized_code"])
-            throw new Error("invalid_request");
+        if (!request.grant_type || !request['pre-authorized_code'])
+            throw new Error('invalid_request');
         const { signer, payload } = await didJWT
-            .verifyJWT(request["pre-authorized_code"], {
+            .verifyJWT(request['pre-authorized_code'], {
                 resolver: this.resolver,
                 policies: { aud: false },
             })
             .catch((e) => {
-                console.log("invalid", request);
                 console.error(e);
-                throw new Error("invalid_request");
+                throw new Error('invalid_request');
             });
         const { pin } = await this.store.getById(payload.id);
         const { iat, aud, iss, ...extrasRaw } = payload;
         const extras = extrasRaw ?? {};
 
-        if (pin && pin !== request.user_pin) throw new Error("invalid_grant");
-        if (signer.controller !== this.did) throw new Error("invalid_token");
+        if (pin && pin !== request.user_pin) throw new Error('invalid_grant');
+        if (signer.controller !== this.did) throw new Error('invalid_token');
         const access_token = await didJWT.createJWT(
             {
                 aud: payload.aud,
@@ -192,12 +191,12 @@ export class VcIssuer {
                 signer: this.signer,
                 expiresIn: 24 * 60 * 60,
             },
-            { alg: this.alg, kid: this.kid }
+            { alg: this.alg, kid: this.kid },
         );
 
         return {
             access_token,
-            token_type: "bearer",
+            token_type: 'bearer',
             expires_in: 86400,
             c_nonce: nanoid(),
             c_nonce_expires_in: 86400,
@@ -211,7 +210,7 @@ export class VcIssuer {
         token?: string;
         proof?: string;
     }) {
-        if (!token || !proof) throw new Error("invalid_request");
+        if (!token || !proof) throw new Error('invalid_request');
         const { payload, signer } = await didJWT.verifyJWT(token, {
             policies: { aud: false },
             resolver: this.resolver,
@@ -220,7 +219,7 @@ export class VcIssuer {
             signer.controller !== this.did ||
             payload.exp < Math.floor(Date.now() / 1000)
         )
-            throw new Error("invalid_token");
+            throw new Error('invalid_token');
         const { signer: didSigner } = await didJWT.verifyJWT(proof, {
             policies: { aud: false },
             resolver: this.resolver,
@@ -239,12 +238,12 @@ export class VcIssuer {
             // @ts-ignore
             response = { credential_responses: [] };
             response.credential_responses = credentials.map((credential) => ({
-                format: "jwt_vc_json",
+                format: 'jwt_vc_json',
                 credential,
             }));
         } else {
             response = {
-                format: "jwt_vc_json",
+                format: 'jwt_vc_json',
                 credential: credentials[0],
             };
         }
@@ -253,4 +252,4 @@ export class VcIssuer {
     }
 }
 
-export * from "./index.types";
+export * from './index.types';

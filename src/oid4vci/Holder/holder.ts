@@ -1,10 +1,11 @@
-import axios from "axios";
-import { parseQueryStringToJson } from "../../utils/query";
-import { CreateTokenRequestOptions } from "./index.types";
-import { KeyPairRequirements } from "../../common/index.types";
-import * as didJWT from "did-jwt";
-import { buildSigner, snakeToCamelRecursive } from "../../utils/utils";
-import { joinUrls } from "../../utils/url";
+import axios from 'axios';
+import { parseQueryStringToJson } from '../../utils/query';
+import { CreateTokenRequestOptions } from './index.types';
+import { KeyPairRequirements } from '../../common/index.types';
+import * as didJWT from 'did-jwt';
+import { buildSigner, snakeToCamelRecursive } from '../../utils/utils';
+import { joinUrls } from '../../utils/url';
+import qs from 'querystring';
 
 export class VcHolder {
     private holderKeys: KeyPairRequirements;
@@ -17,8 +18,8 @@ export class VcHolder {
 
     async createTokenRequest(args: CreateTokenRequestOptions) {
         const response = {
-            grant_type: "urn:ietf:params:oauth:grant-type:pre-authorized_code",
-            "pre-authorized_code": args.preAuthCode,
+            grant_type: 'urn:ietf:params:oauth:grant-type:pre-authorized_code',
+            'pre-authorized_code': args.preAuthCode,
         };
         // @ts-ignore
         if (args.userPin) response.user_pin = args.userPin;
@@ -26,9 +27,9 @@ export class VcHolder {
     }
 
     async parseCredentialOffer(offer: string): Promise<Record<string, any>> {
-        const rawOffer = parseQueryStringToJson(
-            decodeURI(offer.split("openid-credential-offer://")[1])
-        );
+        const decodedUri = decodeURI(offer);
+        const search = new URL(decodedUri).search;
+        const rawOffer = parseQueryStringToJson(search);
         let credentialOffer;
         if (rawOffer.credentialOfferUri) {
             const { data } = await axios.get(rawOffer.credentialOfferUri);
@@ -44,11 +45,11 @@ export class VcHolder {
         const offerRaw = await this.parseCredentialOffer(credentialOffer);
         const metadataEndpoint = joinUrls(
             offerRaw.credentialIssuer,
-            ".well-known/openid-credential-issuer"
+            '.well-known/openid-credential-issuer',
         );
         const oauthMetadataUrl = joinUrls(
             offerRaw.credentialIssuer,
-            ".well-known/oauth-authorization-server"
+            '.well-known/oauth-authorization-server',
         );
         const { data } = await axios.get(metadataEndpoint);
         const { data: oauthServerMetadata } = await axios.get(oauthMetadataUrl);
@@ -59,40 +60,60 @@ export class VcHolder {
 
         const display =
             metadata.display &&
-            metadata.display.find((d: any) => d.locale === "en-US");
+            metadata.display.find((d: any) => d.locale === 'en-US');
         metadata.display = display;
 
         return metadata;
+    }
+
+    constructPayload(
+        credentials: string[],
+        conf: Record<string, any>,
+        proof: string,
+    ) {
+        let payload;
+        if (credentials.length > 1) {
+            payload = {
+                credential_requests: [
+                    ...credentials.map((c) => {
+                        const format = conf[c].format;
+                        let p: Record<string, any> = {
+                            format,
+                            proof: {
+                                proof_type: 'jwt',
+                                jwt: proof,
+                            },
+                            credential_definition:
+                                conf[c].credential_definition,
+                        };
+                        if (format === 'vc+sd-jwt') p.vct = conf[c].vct;
+                        return p;
+                    }),
+                ],
+            };
+        } else {
+            payload = {
+                format: conf[credentials[0]].format,
+                credential_definition:
+                    conf[credentials[0]].credential_definition,
+                proof: {
+                    proof_type: 'jwt',
+                    jwt: proof,
+                },
+            };
+        }
+        return payload;
     }
 
     async retrieveCredential(
         path: string,
         accessToken: string,
         credentials: string[],
-        proof: string
+        proof: string,
+        conf: Record<string, any> = null,
     ): Promise<string[]> {
-        const payload =
-            credentials.length > 1
-                ? {
-                      credential_requests: [
-                          ...credentials.map((c) => ({
-                              format: "jwt_vc_json",
-                              //   credentials,
-                              proof: {
-                                  proof_type: "jwt",
-                                  jwt: proof,
-                              },
-                          })),
-                      ],
-                  }
-                : {
-                      format: "jwt_vc_json",
-                      //   credentials,
-                      proof: {
-                          proof_type: "jwt",
-                          jwt: proof,
-                      },
-                  };
+        const payload = this.constructPayload(credentials, conf, proof);
+
         const { data } = await axios.post(path, payload, {
             headers: {
                 Authorization: `Bearer ${accessToken}`,
@@ -102,7 +123,7 @@ export class VcHolder {
             Object.keys(credentials).length > 1
                 ? data.credential_responses.map(
                       (c: { format: string; credential: string }) =>
-                          c.credential
+                          c.credential,
                   )
                 : [data.credential];
         return response;
@@ -119,22 +140,22 @@ export class VcHolder {
 
         const credentialConfigsExist = this.checkArrayOverlap(
             credentialConfigurationIds,
-            Object.keys(metadata.credentialConfigurationsSupported)
+            Object.keys(metadata.credentialConfigurationsSupported),
         );
 
         if (!credentialConfigsExist)
-            throw new Error("unsupported_credential_type");
+            throw new Error('unsupported_credential_type');
 
         const createTokenPayload: { preAuthCode: any; userPin?: number } = {
             preAuthCode:
-                grants["urn:ietf:params:oauth:grant-type:pre-authorized_code"][
-                    "pre-authorized_code"
+                grants['urn:ietf:params:oauth:grant-type:pre-authorized_code'][
+                    'pre-authorized_code'
                 ],
         };
 
         if (
-            grants["urn:ietf:params:oauth:grant-type:pre-authorized_code"][
-                "user_pin_required"
+            grants['urn:ietf:params:oauth:grant-type:pre-authorized_code'][
+                'user_pin_required'
             ]
         )
             createTokenPayload.userPin = Number(pin);
@@ -143,7 +164,12 @@ export class VcHolder {
 
         const tokenResponse = await axios.post(
             metadata.tokenEndpoint,
-            tokenRequest
+            qs.stringify(tokenRequest),
+            {
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+            },
         );
 
         const token = await didJWT.createJWT(
@@ -152,7 +178,7 @@ export class VcHolder {
                 nonce: tokenResponse.data.c_nonce,
             },
             { signer: this.signer, issuer: this.holderKeys.did },
-            { alg: this.holderKeys.signingAlgorithm, kid: this.holderKeys.kid }
+            { alg: this.holderKeys.signingAlgorithm, kid: this.holderKeys.kid },
         );
 
         const endpoint =
@@ -164,9 +190,10 @@ export class VcHolder {
             endpoint,
             tokenResponse.data.access_token,
             credentialConfigurationIds,
-            token
+            token,
+            metadata.credentialConfigurationsSupported,
         );
     }
 }
 
-export * from "./index.types";
+export * from './index.types';
