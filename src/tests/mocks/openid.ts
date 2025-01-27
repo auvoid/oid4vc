@@ -14,11 +14,6 @@ import { testingKeys } from './keys.mock';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const file = path.resolve(__dirname, './store.test-mock');
-
 class Store {
     create(payload: { id: string; pin: number }) {
         return { id: payload.id, pin: null } as {

@@ -40,6 +40,7 @@ export function startServer(port = 5999) {
         });
         const response = await issuer.createSendCredentialsResponse({
             credentials: credentials,
+            format: 'jwt_vc_json',
         });
         res.json(response);
     });
@@ -55,6 +56,7 @@ export function startServer(port = 5999) {
         });
         const response = await issuer.createSendCredentialsResponse({
             credentials: [...credentials, ...credentials],
+            format: 'jwt_vc_json',
         });
         res.json(response);
     });
