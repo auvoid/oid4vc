@@ -9,6 +9,7 @@ import {
     IssuerStoreData,
     SupportedCredentials,
     VcIssuerOptions,
+    CredentialFormat,
 } from './index.types';
 import { generatePin } from '../../utils/pin';
 import { TokenRequest } from '../Holder/index.types';
@@ -230,15 +231,17 @@ export class VcIssuer {
 
     async createSendCredentialsResponse({
         credentials,
+        format,
     }: {
         credentials: string[];
+        format: CredentialFormat;
     }) {
         let response;
         if (credentials.length > 1) {
             // @ts-ignore
             response = { credential_responses: [] };
             response.credential_responses = credentials.map((credential) => ({
-                format: 'jwt_vc_json',
+                format,
                 credential,
             }));
         } else {
